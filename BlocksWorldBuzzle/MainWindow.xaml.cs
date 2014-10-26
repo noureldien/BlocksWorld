@@ -358,6 +358,10 @@ namespace BlocksWorldBuzzle
             labelNodes.Content = String.Format("{0:0,0}", nodes);
         }
 
+        /// <summary>
+        /// Print the solution restrosepctively.
+        /// </summary>
+        /// <param name="node"></param>
         private void PrintSolution(Node node)
         {
             int steps = 0;
@@ -380,6 +384,9 @@ namespace BlocksWorldBuzzle
             Utils.DebugLine("---------------");
         }
 
+        /// <summary>
+        /// Print message inforimg the user that no solution was found.
+        /// </summary>
         private void PrintSolutionNotFound()
         {
             Utils.DebugLine("--------------------------------");
@@ -387,6 +394,10 @@ namespace BlocksWorldBuzzle
             Utils.DebugLine("--------------------------------");
         }
 
+        /// <summary>
+        /// Print the data of the given node.
+        /// </summary>
+        /// <param name="data"></param>
         private void PrintNode(char[,] data)
         {
             Utils.DebugLine(String.Empty);
@@ -394,6 +405,9 @@ namespace BlocksWorldBuzzle
             Utils.DebugLine(String.Format("| {0} {1} |", data[1, 0], data[1, 1]));
         }
 
+        /// <summary>
+        /// Stop the info and search thread. Update the status to 'Finish'.
+        /// </summary>
         private void SearchFinished()
         {
             // after reaching a solution, stop the threads
