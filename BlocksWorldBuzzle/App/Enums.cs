@@ -20,5 +20,6 @@ namespace BlocksWorldBuzzle
         _3_IterativeDeepeningDF = 3,
         _4_IterativeDeepeningBF = 4,
         _5_Heuristic = 5,
+        _6_Dummy = 6,
     }
 }

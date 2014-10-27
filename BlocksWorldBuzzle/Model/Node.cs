@@ -23,7 +23,7 @@ namespace BlocksWorldBuzzle
 
         public override string ToString()
         {
-            return string.Format("'{0}' '{1}' '{2}' '{3}'", Data[0, 0], Data[0, 1], Data[1, 0], Data[1, 1]);
+            return String.Format("'{0}' '{1}' '{2}' '{3}'", Data[0, 0], Data[0, 1], Data[1, 0], Data[1, 1]);
         }
     }
 }

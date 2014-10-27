@@ -100,6 +100,7 @@ namespace BlocksWorldBuzzle
         private void ButtonStart_Click(object sender, RoutedEventArgs e)
         {
             groupBoxSearchType.IsEnabled = false;
+            groupBoxOutput.IsEnabled = false;
             string content = String.Empty;
 
             switch (gameState)
@@ -140,6 +141,7 @@ namespace BlocksWorldBuzzle
                 labelGameState.Content = this.gameState.ToString().ToUpper();
                 labelLevels.Content = "ZERO";
                 labelNodes.Content = "ZERO";
+                textBoxOutput.Text = string.Empty;
             }
         }
 
@@ -229,25 +231,32 @@ namespace BlocksWorldBuzzle
             // set initial and goal states
             initialState = new char[,]
             { 
-                { TileE, TileE },
-                { TileA, TileG },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileA, TileB, TileC, TileG },
             };
             goalState = new char[,]
             { 
-                { TileA, TileE },
-                { TileG, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileA, TileE, TileE },
+                { TileE, TileB, TileE, TileE },
+                { TileE, TileC, TileE, TileG },
             };
 
-            // copy the goal state to another 1D array           
+            // copy the goal state to another 1D array
             goalState1D = TwoDToOneD(goalState);
 
             // create all possible states (by permutation)
             char[,] emptyState = new char[,]
             { 
-                { TileE, TileE },
-                { TileE, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileE, TileE, TileE },
+                { TileE, TileE, TileE, TileE },
             };
             allStates = DataPermutations(TileA, DataPermutations(TileG, emptyState));
+            labelPossibleStates.Content = String.Format("{0} {1}", labelPossibleStates.Content, allStates.Length);
         }
 
         /// <summary>
@@ -272,6 +281,9 @@ namespace BlocksWorldBuzzle
                     break;
                 case SearchType._5_Heuristic:
                     threadStart = new ThreadStart(Heuristic);
+                    break;
+                case SearchType._6_Dummy:
+                    threadStart = new ThreadStart(DummySearch);
                     break;
                 default:
                     threadStart = null;
@@ -316,8 +328,6 @@ namespace BlocksWorldBuzzle
         /// </summary>
         private void Reset()
         {
-            nodes = 0;
-            levels = 0;
             if (searchThread != null && searchThread.IsAlive)
             {
                 if (searchThread.ThreadState == ThreadState.Suspended)
@@ -335,6 +345,10 @@ namespace BlocksWorldBuzzle
                 infoThread.Abort();
             }
             gameState = GameState.Stopped;
+            
+            // the counters need to be reseted after aborting the search thread
+            nodes = 0;
+            levels = 0;
         }
 
         /// <summary>
@@ -365,23 +379,24 @@ namespace BlocksWorldBuzzle
         private void PrintSolution(Node node)
         {
             int steps = 0;
-            Utils.DebugLine(String.Empty);
-            Utils.DebugLine(String.Empty);
-            Utils.DebugLine("----------------------------------------------------------------------------------");
-            Utils.DebugLine("|  Hooooooooooooray, solution found! Printing the solution path retrospectively  |");
-            Utils.DebugLine("----------------------------------------------------------------------------------");
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("\n--------------------------------");
+            stringBuilder.Append("\n| Hoooooooray, solution found! |");
+            stringBuilder.Append("\n| The solution retrospectively |");
+            stringBuilder.Append("\n--------------------------------");
             while (node != null)
             {
                 steps++;
-                PrintNode(node.Data);
+                stringBuilder.Append(FormatNodeData(node.Data));
                 node = node.Parent;
             }
 
-            Utils.DebugLine(String.Empty);
-            Utils.DebugLine(String.Format("STEPS: {0}", steps));
-            Utils.DebugLine("---------------");
-            Utils.DebugLine("|     EOP     |");
-            Utils.DebugLine("---------------");
+            stringBuilder.Append(String.Format("\n\nSTEPS: {0}\n\n---------------\n|     EOP     |\n---------------", steps));
+
+            this.Dispatcher.Invoke(() =>
+            {
+                textBoxOutput.Text = stringBuilder.ToString();
+            });
         }
 
         /// <summary>
@@ -389,20 +404,39 @@ namespace BlocksWorldBuzzle
         /// </summary>
         private void PrintSolutionNotFound()
         {
-            Utils.DebugLine("--------------------------------");
-            Utils.DebugLine("|  Sorry, no solution found !  |");
-            Utils.DebugLine("--------------------------------");
+            string st = "\n--------------------------------\n|  Sorry, no solution found !  |\n--------------------------------";
+
+            this.Dispatcher.Invoke(() =>
+            {
+                textBoxOutput.Text = st;
+            });
         }
 
         /// <summary>
-        /// Print the data of the given node.
+        /// Build string out of given data.
         /// </summary>
         /// <param name="data"></param>
-        private void PrintNode(char[,] data)
+        private string FormatNodeData(char[,] data)
         {
-            Utils.DebugLine(String.Empty);
-            Utils.DebugLine(String.Format("| {0} {1} |", data[0, 0], data[0, 1]));
-            Utils.DebugLine(String.Format("| {0} {1} |", data[1, 0], data[1, 1]));
+            StringBuilder stringBuilder = new StringBuilder();
+
+            int dimensionX = data.GetLength(1);
+            int dimensionY = data.GetLength(0);
+
+            stringBuilder.Append("\n");
+            for (int i = 0; i < dimensionY; i++)
+            {
+                stringBuilder.Append("\n| ");
+
+                for (int j = 0; j < dimensionX; j++)
+                {
+                    stringBuilder.Append(String.Format("{0} ", data[i, j]));
+                }
+
+                stringBuilder.Append("|");
+            }
+
+            return stringBuilder.ToString();
         }
 
         /// <summary>
@@ -421,6 +455,7 @@ namespace BlocksWorldBuzzle
             this.Dispatcher.Invoke(() =>
             {
                 buttonStart.IsEnabled = false;
+                groupBoxOutput.IsEnabled = true;
                 labelGameState.Content = "FINISHED";
                 UpdateInfo();
             });
@@ -831,7 +866,6 @@ namespace BlocksWorldBuzzle
         private void IterativeDeepeningDF()
         {
             DepthFirst(iterativeDeepeningLevel);
-            SearchFinished();
         }
 
         /// <summary>
@@ -841,7 +875,6 @@ namespace BlocksWorldBuzzle
         private void IterativeDeepeningBF()
         {
             BreadthFirst(iterativeDeepeningLevel);
-            SearchFinished();
         }
 
         /// <summary>
@@ -908,8 +941,8 @@ namespace BlocksWorldBuzzle
             // approach 3: any other distance algorithm
 
             // approach 1
-            int dimensionX = dataOne.GetLength(0);
-            int dimensionY = dataOne.GetLength(1);
+            int dimensionX = dataOne.GetLength(1);
+            int dimensionY = dataOne.GetLength(0);
             int misplacedCount = 0;
             int distance = 0;
             int index = 0;
@@ -946,10 +979,6 @@ namespace BlocksWorldBuzzle
         /// </summary>
         private void DummySearch()
         {
-            Utils.DebugLine("----------------------------");
-            Utils.DebugLine("|   Dummy Search Started   |");
-            Utils.DebugLine("----------------------------");
-
             decimal x = 1;
             for (long i = 0; i < 100000000; i++)
             {
@@ -963,11 +992,8 @@ namespace BlocksWorldBuzzle
                 }
             }
 
+            PrintSolutionNotFound();
             SearchFinished();
-
-            Utils.DebugLine("----------------------------");
-            Utils.DebugLine("|   Dummy Search Finish    |");
-            Utils.DebugLine("----------------------------");
         }
 
         #endregion

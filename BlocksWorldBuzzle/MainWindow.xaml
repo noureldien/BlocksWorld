@@ -4,14 +4,14 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d" x:Class="BlocksWorldBuzzle.MainWindow"
-    Title="Blockz World Buzzle" Height="330" Width="396"
+    Title="Blockz World Buzzle" Height="350" Width="396"
     ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
     Closing="Window_Closing" Icon="Images/ic_Icon_64.png">
     <Grid>
-        <GroupBox x:Name="groupBoxOutput" Header="Output" HorizontalAlignment="Left" Height="192" VerticalAlignment="Top" Width="183" Margin="187,10,0,0">
-            <TextBox x:Name="textBoxOutput" AcceptsReturn="True" TextWrapping="Wrap" Margin="10" BorderBrush="#FFEAEAEA"/>
+        <GroupBox x:Name="groupBoxOutput" Header="Output" HorizontalAlignment="Left" Height="212" VerticalAlignment="Top" Width="183" Margin="187,10,0,0">
+            <TextBox x:Name="textBoxOutput" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" Margin="10" BorderBrush="#FFEAEAEA" FontFamily="Consolas" FontSize="12"/>
         </GroupBox>
-        <GroupBox x:Name="groupBoxSearchType" Header="Search Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="192" Width="172">
+        <GroupBox x:Name="groupBoxSearchType" Header="Search Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="212" Width="172">
             <StackPanel>
                 <RadioButton Tag="1" GroupName="SearchType" Content="Depth First" IsChecked="True" Margin="10,15,0,5" Click="RadioButton_Click"/>
                 <RadioButton Tag="2" GroupName="SearchType" Content="Breadth First" Margin="10,5,0,5" Click="RadioButton_Click"/>
@@ -29,11 +29,13 @@
                     <RepeatButton x:Name="buttonNumericDown" Grid.Column="2" HorizontalAlignment="Right" Margin="0,10,0,0"  Content="▼" Width="20" Click="ButtonNumericDown_Click" FontSize="6" />
                 </Grid>
                 <RadioButton Tag="5" GroupName="SearchType" Content="Heuristic" Margin="10,5,0,5" Click="RadioButton_Click"/>
+                <RadioButton Tag="6" GroupName="SearchType" Content="Dummy" Margin="10,5,0,5" Click="RadioButton_Click"/>
             </StackPanel>
         </GroupBox>
-        <Button Content="►" x:Name="buttonStart" HorizontalAlignment="Left" Margin="11,217,0,0" Width="75" Click="ButtonStart_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
-        <Button Content="■" x:Name="buttonReset" HorizontalAlignment="Left" Margin="106,217,0,0" Width="75" Click="ButtonReset_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
-        <Grid Margin="0,259,0,0" Background="#FFF0F0F0" HorizontalAlignment="Left" Width="388" Height="36" VerticalAlignment="Top">
+        <Button x:Name="buttonStart" Content="►" HorizontalAlignment="Left" Margin="11,237,0,0" Width="75" Click="ButtonStart_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
+        <Button x:Name="buttonReset" Content="■" HorizontalAlignment="Left" Margin="106,237,0,0" Width="75" Click="ButtonReset_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
+        <Label x:Name="labelPossibleStates" Content="Possible States:" HorizontalAlignment="Left" Margin="225,236,0,0" VerticalAlignment="Top"/>
+        <Grid Margin="0,280,0,0" Background="#FFF0F0F0" HorizontalAlignment="Left" Width="388" Height="36" VerticalAlignment="Top">
             <Label Content="STATE:" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top"/>
             <Label x:Name="labelGameState" Content="STOPPED" HorizontalAlignment="Left" Margin="47,5,0,0" VerticalAlignment="Top"/>
             <Label Content="LEVELS:" HorizontalAlignment="Left" Margin="140,5,0,0" VerticalAlignment="Top"/>
