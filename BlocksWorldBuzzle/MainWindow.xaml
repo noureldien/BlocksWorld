@@ -4,44 +4,79 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d" x:Class="BlocksWorldBuzzle.MainWindow"
-    Title="Blockz World Buzzle" Height="350" Width="396"
+    Title="Blockz World Buzzle" Height="490" Width="469"
     ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-    Closing="Window_Closing" Icon="Images/ic_Icon_64.png">
+    Closing="Window_Closing" Icon="Images/ic_Icon_64.png"
+    Loaded="Window_Loaded">
     <Grid>
-        <GroupBox x:Name="groupBoxOutput" Header="Output" HorizontalAlignment="Left" Height="212" VerticalAlignment="Top" Width="183" Margin="187,10,0,0">
-            <TextBox x:Name="textBoxOutput" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" Margin="10" BorderBrush="#FFEAEAEA" FontFamily="Consolas" FontSize="12"/>
-        </GroupBox>
-        <GroupBox x:Name="groupBoxSearchType" Header="Search Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="212" Width="172">
+        <GroupBox x:Name="groupBoxSearchType" Header="Search Type" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="207" Width="172">
             <StackPanel>
                 <RadioButton Tag="1" GroupName="SearchType" Content="Depth First" IsChecked="True" Margin="10,15,0,5" Click="RadioButton_Click"/>
                 <RadioButton Tag="2" GroupName="SearchType" Content="Breadth First" Margin="10,5,0,5" Click="RadioButton_Click"/>
-                <RadioButton Tag="3" GroupName="SearchType" Content="Iterative Dping (D 1st)" Margin="10,5,0,5" Click="RadioButton_Click" />
-                <RadioButton Tag="4" GroupName="SearchType" Content="Iterative Dping (B 1st)" Margin="10,5,0,5" Click="RadioButton_Click" />
-                <Grid x:Name="gridNumeric" Height="20" Margin="10,0,10,0" IsEnabled="False">
+                <RadioButton Tag="3" GroupName="SearchType" Content="Depth Limit" Margin="10,5,0,5" Click="RadioButton_Click" />
+                <RadioButton Tag="4" GroupName="SearchType" Content="Breadth Limit" Margin="10,5,0,5" Click="RadioButton_Click" />
+                <Grid x:Name="gridLevel" Height="20" Margin="10,0,10,0" IsEnabled="False">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="75"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="20"/>
                     </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Margin="14,-5,0,0" Content="Max level"/>
-                    <TextBox x:Name="textBoxNumeric" Grid.Column="1" x:FieldModifier="private" Margin="0" Text="1" TextChanged="TextBoxNumeric_TextChanged" />
-                    <RepeatButton x:Name="buttonNumericUp" Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,0,10" Content="▲" Width="20" Click="ButtonNumericUp_Click" FontSize="6" />
-                    <RepeatButton x:Name="buttonNumericDown" Grid.Column="2" HorizontalAlignment="Right" Margin="0,10,0,0"  Content="▼" Width="20" Click="ButtonNumericDown_Click" FontSize="6" />
+                    <Label Grid.Column="0" Margin="20,0,0,0" Padding="0" Content="Max level"/>
+                    <TextBox x:Name="textBoxLevel" x:FieldModifier="private" Grid.Column="1" Margin="0" Text="1" IsReadOnly="True" TextChanged="TextBoxLevel_TextChanged" />
+                    <RepeatButton x:Name="buttonLevelUp" Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,0,10" Content="▲" Width="20" Click="ButtonLevelUp_Click" FontSize="6" />
+                    <RepeatButton x:Name="buttonLevelDown" Grid.Column="2" HorizontalAlignment="Right" Margin="0,10,0,0"  Content="▼" Width="20" Click="ButtonLevelDown_Click" FontSize="6" />
                 </Grid>
                 <RadioButton Tag="5" GroupName="SearchType" Content="Heuristic" Margin="10,5,0,5" Click="RadioButton_Click"/>
-                <RadioButton Tag="6" GroupName="SearchType" Content="Dummy" Margin="10,5,0,5" Click="RadioButton_Click"/>
+                <RadioButton Tag="6" GroupName="SearchType" Content="Iterative Deepening" Margin="10,5,0,5" Click="RadioButton_Click"/>
             </StackPanel>
         </GroupBox>
-        <Button x:Name="buttonStart" Content="►" HorizontalAlignment="Left" Margin="11,237,0,0" Width="75" Click="ButtonStart_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
-        <Button x:Name="buttonReset" Content="■" HorizontalAlignment="Left" Margin="106,237,0,0" Width="75" Click="ButtonReset_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
-        <Label x:Name="labelPossibleStates" Content="Possible States:" HorizontalAlignment="Left" Margin="225,236,0,0" VerticalAlignment="Top"/>
-        <Grid Margin="0,280,0,0" Background="#FFF0F0F0" HorizontalAlignment="Left" Width="388" Height="36" VerticalAlignment="Top">
+        <GroupBox x:Name="groupBoxOutput" Header="Output" HorizontalAlignment="Left" Height="326" VerticalAlignment="Top" Width="257" Margin="187,10,0,0">
+            <TextBox x:Name="textBoxOutput" ScrollViewer.VerticalScrollBarVisibility="Auto" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" Margin="5" BorderBrush="#FFEAEAEA" FontFamily="Consolas" FontSize="12"/>
+        </GroupBox>
+        <GroupBox x:Name="groupBoxWorld" Header="World" HorizontalAlignment="Left" Height="114" VerticalAlignment="Top" Width="172" Margin="10,222,0,0">
+            <StackPanel>
+                <Grid Height="20" Margin="5,10,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" Margin="0" Padding="0" Content="Width"/>
+                    <TextBox x:Name="textBoxWorldWidth" Grid.Column="1" x:FieldModifier="private" Margin="0" IsReadOnly="True" />
+                    <RepeatButton x:Name="buttonWorldWidthUp" Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,0,10" Content="▲" Width="20" Click="ButtonWorldWidthUp_Click" FontSize="6" />
+                    <RepeatButton x:Name="buttonWorldWidthDown" Grid.Column="2" HorizontalAlignment="Right" Margin="0,10,0,0"  Content="▼" Width="20" Click="ButtonWorldWidthDown_Click" FontSize="6" />
+                </Grid>
+                <Grid Height="20" Margin="5,10,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" Margin="0" Padding="0" Content="Height"/>
+                    <TextBox x:Name="textBoxWorldHeight" Grid.Column="1" x:FieldModifier="private" Margin="0" IsReadOnly="True" />
+                    <RepeatButton x:Name="buttonWorldHeightUp" Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,0,10" Content="▲" Width="20" Click="ButtonWorldHeightUp_Click" FontSize="6" />
+                    <RepeatButton x:Name="buttonWorldHeightDown" Grid.Column="2" HorizontalAlignment="Right" Margin="0,10,0,0"  Content="▼" Width="20" Click="ButtonWorldHeightDown_Click" FontSize="6" />
+                </Grid>
+                <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                    <CheckBox Margin="5,0,0,0" Content="A" IsChecked="True" Tag="A" Click="CheckBox_Click"></CheckBox>
+                    <CheckBox Margin="30,0,0,0" Content="B" IsChecked="True" Tag="B" Click="CheckBox_Click"></CheckBox>
+                    <CheckBox Margin="30,0,0,0" Content="C" IsChecked="True" Tag="C" Click="CheckBox_Click"></CheckBox>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+        <Button x:Name="buttonStart" Content="►" HorizontalAlignment="Left" Margin="10,351,0,0" Width="75" Click="ButtonStart_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
+        <Button x:Name="buttonReset" Content="■" HorizontalAlignment="Left" Margin="107,351,0,0" Width="75" Click="ButtonReset_Click" FontFamily="Arial" FontSize="14" Height="25" VerticalAlignment="Top"/>
+        <Grid Margin="0,389,0,0" Background="#FFF0F0F0" HorizontalAlignment="Left" Width="463" Height="66" VerticalAlignment="Top">
             <Label Content="STATE:" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top"/>
             <Label x:Name="labelGameState" Content="STOPPED" HorizontalAlignment="Left" Margin="47,5,0,0" VerticalAlignment="Top"/>
             <Label Content="LEVELS:" HorizontalAlignment="Left" Margin="140,5,0,0" VerticalAlignment="Top"/>
             <Label x:Name="labelLevels" Content="ZERO" HorizontalAlignment="Left" Margin="184,5,0,0" VerticalAlignment="Top"/>
             <Label Content="NODES:" HorizontalAlignment="Left" Margin="250,5,0,0" VerticalAlignment="Top"/>
             <Label x:Name="labelNodes" Content="ZERO" HorizontalAlignment="Left" Margin="295,5,0,0" VerticalAlignment="Top"/>
+            <Label Content="POSSIBLE STATES:" HorizontalAlignment="Left" Margin="10,30,0,0" VerticalAlignment="Top"/>
+            <Label x:Name="labelPossibleStates" HorizontalAlignment="Left" Margin="108,30,0,0" VerticalAlignment="Top"/>
+            <Label Content="TIME (mm:ss):" HorizontalAlignment="Left" Margin="250,32,0,0" VerticalAlignment="Top"/>
+            <Label x:Name="labelTime" HorizontalAlignment="Left" Margin="325,32,0,0" VerticalAlignment="Top"/>
         </Grid>
     </Grid>
 </Window>

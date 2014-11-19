@@ -17,9 +17,9 @@ namespace BlocksWorldBuzzle
     {
         _1_DepthFirst = 1,
         _2_BreadthFirst = 2,
-        _3_IterativeDeepeningDF = 3,
-        _4_IterativeDeepeningBF = 4,
+        _3_DepthLimit = 3,
+        _4_BreadthLimit = 4,
         _5_Heuristic = 5,
-        _6_Dummy = 6,
+        _6_IterativeDeepening = 6,
     }
 }

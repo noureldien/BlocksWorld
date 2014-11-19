@@ -42,11 +42,11 @@ namespace BlocksWorldBuzzle
         /// <summary>
         /// agent tile.
         /// </summary>
-        private const char TileG = 'g';
+        private const char TileG = '☻';
         /// <summary>
         /// Max allowed level for iterative deepening.
         /// </summary>
-        private const int iterativeDeepeningMaxLevel = 100000;
+        private const int IterativeDeepeningMaxLevel = 100000;
         /// <summary>
         /// Min allowed level for iterative deepening.
         /// </summary>
@@ -55,6 +55,10 @@ namespace BlocksWorldBuzzle
         /// How many milliseconds between 2 info updates.
         /// </summary>
         private const int UpdateInfoTimeFrameMilliSeconds = 500;
+        /// <summary>
+        /// Max allowed width/height for the game.
+        /// </summary>
+        private const int MaxWorldDimension = 7;
 
         #endregion
 
@@ -67,8 +71,9 @@ namespace BlocksWorldBuzzle
         private char[,] initialState;
         private char[,] goalState;
         private char[][,] allStates;
-        private List<char> goalState1D;
         private int iterativeDeepeningLevel;
+        private int worldWidth;
+        private int worldHeight;
         /// <summary>
         /// Counter for the no. of nodes created.
         /// </summary>
@@ -77,6 +82,26 @@ namespace BlocksWorldBuzzle
         /// Current level.
         /// </summary>
         private long levels = 0;
+        /// <summary>
+        /// If tile A is considered in the calcuations.
+        /// </summary>
+        private bool isTileAEnabled = true;
+        /// <summary>
+        /// If tile B is considered in the calcuations.
+        /// </summary>
+        private bool isTileBEnabled = true;
+        /// <summary>
+        /// If tile C is considered in the calcuations.
+        /// </summary>
+        private bool isTileCEnabled = true;
+        /// <summary>
+        /// Time stap when the search algorithm started.
+        /// </summary>
+        private DateTime startTime;
+        /// <summary>
+        /// Time span taken for processing the search algorithm.
+        /// </summary>
+        private TimeSpan processDuration;
 
         #endregion
 
@@ -85,12 +110,21 @@ namespace BlocksWorldBuzzle
         public MainWindow()
         {
             InitializeComponent();
-            Initialize();
         }
 
         #endregion
 
         #region Event Handlers
+
+        /// <summary>
+        /// Load the game.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            Initialize();
+        }
 
         /// <summary>
         /// Start/pause the search according to the current state of the game.
@@ -100,7 +134,7 @@ namespace BlocksWorldBuzzle
         private void ButtonStart_Click(object sender, RoutedEventArgs e)
         {
             groupBoxSearchType.IsEnabled = false;
-            groupBoxOutput.IsEnabled = false;
+            groupBoxWorld.IsEnabled = false;
             string content = String.Empty;
 
             switch (gameState)
@@ -108,14 +142,18 @@ namespace BlocksWorldBuzzle
                 case GameState.Started:
                     Pause();
                     content = "►";
+                    processDuration = DateTime.Now - startTime;
                     break;
                 case GameState.Stopped:
                     Start();
                     content = "▐▐ ";
+                    processDuration = TimeSpan.FromSeconds(0);
+                    startTime = DateTime.Now;
                     break;
                 case GameState.Paused:
                     Resume();
                     content = "▐▐ ";
+                    startTime = DateTime.Now;
                     break;
                 default:
                     break;
@@ -138,10 +176,15 @@ namespace BlocksWorldBuzzle
                 buttonStart.Content = "►";
                 buttonStart.IsEnabled = true;
                 groupBoxSearchType.IsEnabled = true;
+                groupBoxWorld.IsEnabled = true;
                 labelGameState.Content = this.gameState.ToString().ToUpper();
                 labelLevels.Content = "ZERO";
                 labelNodes.Content = "ZERO";
-                textBoxOutput.Text = string.Empty;
+                textBoxOutput.Text = InitialOutput();
+                labelTime.Content = string.Empty;
+
+                startTime = DateTime.Now;
+                processDuration = TimeSpan.FromSeconds(0);
             }
         }
 
@@ -155,55 +198,147 @@ namespace BlocksWorldBuzzle
             string tag = ((RadioButton)sender).Tag.ToString();
             int choise = int.Parse(tag);
             searchType = (SearchType)choise;
-            gridNumeric.IsEnabled = searchType == SearchType._3_IterativeDeepeningDF || searchType == SearchType._4_IterativeDeepeningBF;
+            gridLevel.IsEnabled = searchType == SearchType._3_DepthLimit || searchType == SearchType._4_BreadthLimit;
         }
 
         /// <summary>
-        /// Increment the value of the numericTextBox.
+        /// Increment the value of the textBoxLevel.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void ButtonNumericUp_Click(object sender, RoutedEventArgs e)
+        private void ButtonLevelUp_Click(object sender, RoutedEventArgs e)
         {
-            if (iterativeDeepeningLevel < iterativeDeepeningMaxLevel - 1)
+            if (iterativeDeepeningLevel < IterativeDeepeningMaxLevel - 1)
             {
                 iterativeDeepeningLevel++;
-                textBoxNumeric.Text = iterativeDeepeningLevel.ToString();
-                textBoxNumeric.Tag = textBoxNumeric.Text;
+                textBoxLevel.Text = iterativeDeepeningLevel.ToString();
+                textBoxLevel.Tag = textBoxLevel.Text;
             }
         }
 
         /// <summary>
-        /// Decrement the value of the numericTextBox.
+        /// Decrement the value of the textBoxLevel.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void ButtonNumericDown_Click(object sender, RoutedEventArgs e)
+        private void ButtonLevelDown_Click(object sender, RoutedEventArgs e)
         {
             if (iterativeDeepeningLevel > IterativeDeepeningMinLevel)
             {
                 iterativeDeepeningLevel--;
-                textBoxNumeric.Text = iterativeDeepeningLevel.ToString();
-                textBoxNumeric.Tag = textBoxNumeric.Text;
+                textBoxLevel.Text = iterativeDeepeningLevel.ToString();
+                textBoxLevel.Tag = textBoxLevel.Text;
             }
         }
 
         /// <summary>
-        /// Check if the entered value of the numericTextBox is numeric.
+        /// Check if the entered value of the textBoxLevel is numeric.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void TextBoxNumeric_TextChanged(object sender, TextChangedEventArgs e)
+        private void TextBoxLevel_TextChanged(object sender, TextChangedEventArgs e)
         {
             int newValue;
-            if (!int.TryParse(textBoxNumeric.Text, out newValue) || newValue > iterativeDeepeningMaxLevel || newValue < 0)
+            if (!int.TryParse(textBoxLevel.Text, out newValue) || newValue > IterativeDeepeningMaxLevel || newValue < 0)
             {
-                textBoxNumeric.Text = iterativeDeepeningLevel.ToString();
+                textBoxLevel.Text = iterativeDeepeningLevel.ToString();
             }
             else
             {
                 iterativeDeepeningLevel = newValue;
             }
+        }
+
+        /// <summary>
+        /// Increase width of the buzzle block.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ButtonWorldWidthUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (worldWidth < MaxWorldDimension)
+            {
+                worldWidth++;
+                textBoxWorldWidth.Text = worldWidth.ToString();
+                textBoxWorldWidth.Tag = textBoxWorldWidth.Text;
+
+                InitializeStatesInvoker();
+            }
+        }
+
+        /// <summary>
+        /// Decrease width of the buzzle block.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ButtonWorldWidthDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (worldWidth > 2)
+            {
+                worldWidth--;
+                textBoxWorldWidth.Text = worldWidth.ToString();
+                textBoxWorldWidth.Tag = textBoxWorldWidth.Text;
+
+                InitializeStatesInvoker();
+            }
+        }
+
+        /// <summary>
+        /// Increase height of the buzzle block.
+        /// </summary>
+        private void ButtonWorldHeightUp_Click(object sender, RoutedEventArgs e)
+        {
+            if (worldHeight < MaxWorldDimension)
+            {
+                worldHeight++;
+                textBoxWorldHeight.Text = worldHeight.ToString();
+                textBoxWorldHeight.Tag = textBoxWorldHeight.Text;
+
+                InitializeStatesInvoker();
+            }
+        }
+
+        /// <summary>
+        /// Decrease height of the buzzle block.
+        /// </summary>
+        private void ButtonWorldHeightDown_Click(object sender, RoutedEventArgs e)
+        {
+            if (worldHeight > 2)
+            {
+                worldHeight--;
+                textBoxWorldHeight.Text = worldHeight.ToString();
+                textBoxWorldHeight.Tag = textBoxWorldHeight.Text;
+
+                InitializeStatesInvoker();
+            }
+        }
+
+        /// <summary>
+        /// Checkbox checked/unchecked, enable/disable the tiles A, B or C accordingly.
+        /// </summary>
+        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            CheckBox checkbox = (CheckBox)sender;
+            string tag = checkbox.Tag.ToString();
+            switch (tag)
+            {
+                case "A":
+                    isTileAEnabled = checkbox.IsChecked ?? false;
+                    break;
+
+                case "B":
+                    isTileBEnabled = checkbox.IsChecked ?? false;
+                    break;
+
+                case "C":
+                    isTileCEnabled = checkbox.IsChecked ?? false;
+                    break;
+
+                default:
+                    break;
+            }
+
+            InitializeStatesInvoker();
         }
 
         /// <summary>
@@ -226,37 +361,124 @@ namespace BlocksWorldBuzzle
         private void Initialize()
         {
             iterativeDeepeningLevel = 1;
-            textBoxNumeric.Text = iterativeDeepeningLevel.ToString();
+            worldWidth = 3;
+            worldHeight = 3;
 
-            // set initial and goal states
-            initialState = new char[,]
-            { 
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileE, TileE, TileE },
-                { TileA, TileB, TileC, TileG },
-            };
-            goalState = new char[,]
-            { 
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileA, TileE, TileE },
-                { TileE, TileB, TileE, TileE },
-                { TileE, TileC, TileE, TileG },
-            };
+            textBoxLevel.Text = iterativeDeepeningLevel.ToString();
+            textBoxWorldWidth.Text = worldWidth.ToString();
+            textBoxWorldHeight.Text = worldHeight.ToString();
+
+            startTime = DateTime.Now;
+            processDuration = TimeSpan.FromSeconds(0);
+
+            InitializeStatesInvoker();
+        }
+
+        /// <summary>
+        /// Initialize initial, goal and empty states according to width and length of the game.
+        /// </summary>
+        private void InitializeStatesInvoker()
+        {
+            groupBoxWorld.IsEnabled = false;
+
+            Thread thread = new Thread(new ThreadStart(InitializeStates));
+            thread.Start();
+        }
+
+        /// <summary>
+        /// Initialize initial, goal and empty states according to width and length of the game.
+        /// </summary>
+        private void InitializeStates()
+        {
+            // empty state
+            char[,] emptyState = new char[this.worldHeight, this.worldWidth];
+            for (int y = 0; y < worldHeight; y++)
+            {
+                for (int x = 0; x < worldWidth; x++)
+                {
+                    emptyState[y, x] = TileE;
+                }
+            }
+
+            // initial state and goal state are created randomly
+            initialState = RandomState(emptyState);
+            goalState = RandomState(emptyState);
 
             // copy the goal state to another 1D array
-            goalState1D = TwoDToOneD(goalState);
+            allStates = DataPermutations(TileG, emptyState);
+            if (isTileAEnabled)
+            {
+                allStates = DataPermutations(TileA, allStates);
+            }
+            if (isTileBEnabled)
+            {
+                allStates = DataPermutations(TileB, allStates);
+            }
+            if (isTileCEnabled)
+            {
+                allStates = DataPermutations(TileC, allStates);
+            }
 
-            // create all possible states (by permutation)
-            char[,] emptyState = new char[,]
-            { 
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileE, TileE, TileE },
-                { TileE, TileE, TileE, TileE },
-            };
-            allStates = DataPermutations(TileA, DataPermutations(TileG, emptyState));
-            labelPossibleStates.Content = String.Format("{0} {1}", labelPossibleStates.Content, allStates.Length);
+            Dispatcher.Invoke(() =>
+            {
+                // all possible states
+                labelPossibleStates.Content = String.Format("{0:0,0}", allStates.Length);
+
+                // show the generated states to the user
+                textBoxOutput.Text =
+                    !EqualStates(initialState, goalState)
+                    ? InitialOutput()
+                    : "Randomly generated initial and goal states are equal, sorry!";
+
+                groupBoxWorld.IsEnabled = true;
+            });
+        }
+
+        /// <summary>
+        /// Take empty state and fill it randomly with tiles A, B, C and G.
+        /// </summary>
+        private char[,] RandomState(char[,] emptyState)
+        {
+            char[,] state = (char[,])emptyState.Clone();
+
+            List<char> tileList = new List<char>();
+            tileList.Add(TileG);
+            if (isTileAEnabled)
+            {
+                tileList.Add(TileA);
+            }
+            if (isTileBEnabled)
+            {
+                tileList.Add(TileB);
+            }
+            if (isTileCEnabled)
+            {
+                tileList.Add(TileC);
+            }
+            char[] tiles = tileList.ToArray();
+
+            Random random = new Random();
+            int max = worldHeight * worldWidth;
+
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                bool isTileAdded = false;
+                while (!isTileAdded)
+                {
+                    Thread.Sleep(10);
+                    double r = random.NextDouble() * max;
+                    int index = (int)r;
+                    int x = index % worldWidth;
+                    int y = index / worldWidth;
+
+                    if (state[y, x] == TileE)
+                    {
+                        state[y, x] = tiles[i];
+                        isTileAdded = true;
+                    }
+                }
+            }
+            return state;
         }
 
         /// <summary>
@@ -273,17 +495,17 @@ namespace BlocksWorldBuzzle
                 case SearchType._2_BreadthFirst:
                     threadStart = new ThreadStart(BreadthFirst);
                     break;
-                case SearchType._3_IterativeDeepeningDF:
-                    threadStart = new ThreadStart(IterativeDeepeningDF);
+                case SearchType._3_DepthLimit:
+                    threadStart = new ThreadStart(DepthLimit);
                     break;
-                case SearchType._4_IterativeDeepeningBF:
-                    threadStart = new ThreadStart(IterativeDeepeningBF);
+                case SearchType._4_BreadthLimit:
+                    threadStart = new ThreadStart(BreadthLimit);
                     break;
                 case SearchType._5_Heuristic:
                     threadStart = new ThreadStart(Heuristic);
                     break;
-                case SearchType._6_Dummy:
-                    threadStart = new ThreadStart(DummySearch);
+                case SearchType._6_IterativeDeepening:
+                    threadStart = new ThreadStart(IterativeDeepening);
                     break;
                 default:
                     threadStart = null;
@@ -345,7 +567,7 @@ namespace BlocksWorldBuzzle
                 infoThread.Abort();
             }
             gameState = GameState.Stopped;
-            
+
             // the counters need to be reseted after aborting the search thread
             nodes = 0;
             levels = 0;
@@ -370,6 +592,18 @@ namespace BlocksWorldBuzzle
         {
             labelLevels.Content = String.Format("{0:0,0}", levels);
             labelNodes.Content = String.Format("{0:0,0}", nodes);
+
+            TimeSpan duration = ((DateTime.Now - startTime) + processDuration);
+            labelTime.Content = String.Format("{0:00}:{1:00}", duration.TotalMinutes, duration.Seconds);
+        }
+
+        /// <summary>
+        /// The initial info to be displayed in the output box. Contains the initial and the goal states.
+        /// </summary>
+        /// <returns></returns>
+        private string InitialOutput()
+        {
+            return string.Format("Initial State:{0}\n\n\nGoal State:{1}", FormatNodeData(initialState), FormatNodeData(goalState));
         }
 
         /// <summary>
@@ -408,7 +642,7 @@ namespace BlocksWorldBuzzle
 
             this.Dispatcher.Invoke(() =>
             {
-                textBoxOutput.Text = st;
+                textBoxOutput.Text = string.Concat(textBoxOutput.Text, st);
             });
         }
 
@@ -455,7 +689,6 @@ namespace BlocksWorldBuzzle
             this.Dispatcher.Invoke(() =>
             {
                 buttonStart.IsEnabled = false;
-                groupBoxOutput.IsEnabled = true;
                 labelGameState.Content = "FINISHED";
                 UpdateInfo();
             });
@@ -499,6 +732,8 @@ namespace BlocksWorldBuzzle
 
             int dimensionX = dataA.GetLength(1);
             int dimensionY = dataA.GetLength(0);
+            Index indexA;
+            Index indexB;
 
             for (int i = 0; i < dimensionY; i++)
             {
@@ -521,11 +756,9 @@ namespace BlocksWorldBuzzle
                         if (distanceTileG == 1 && distanceExceptTileG == 1)
                         {
                             // check if g did the swap
-                            List<char> dataAList = TwoDToOneD(dataA);
-                            List<char> dataBList = TwoDToOneD(dataB);
-                            int indexA = dataAList.IndexOf(TileG);
-                            int indexB = dataBList.IndexOf(TileG);
-                            return dataBList[indexA] == dataAList[indexB] && dataBList[indexA] != TileE;
+                            indexA = ArrayIndexOf(dataA, TileG);
+                            indexB = ArrayIndexOf(dataB, TileG);
+                            return dataB[indexA.Y, indexA.X] == dataA[indexB.Y, indexB.X] && dataB[indexA.Y, indexA.X] != TileE;
                         }
                         else if (distanceTileG == 1 && distanceExceptTileG == 0)
                         {
@@ -541,7 +774,7 @@ namespace BlocksWorldBuzzle
         }
 
         /// <summary>
-        /// Build list of data filled
+        /// Build list of data filled with the given tile.
         /// </summary>
         /// <param name="tile"></param>
         /// <returns></returns>
@@ -612,8 +845,6 @@ namespace BlocksWorldBuzzle
             int dimensionY = dataA.GetLength(0);
             int distance = 0;
 
-            List<char> dataBList = TwoDToOneD(dataB);
-
             for (int i = 0; i < dimensionY; i++)
             {
                 for (int j = 0; j < dimensionX; j++)
@@ -623,10 +854,8 @@ namespace BlocksWorldBuzzle
                     {
                         if (dataA[i, j] != dataB[i, j])
                         {
-                            int index = dataBList.IndexOf(TileG);
-                            int x = index % dimensionX;
-                            int y = index / dimensionX;
-                            distance = Math.Abs(i - y) + Math.Abs(j - x);
+                            Index index = ArrayIndexOf(dataB, TileG);
+                            distance = Math.Abs(i - index.Y) + Math.Abs(j - index.X);
                         }
 
                         return distance;
@@ -646,11 +875,8 @@ namespace BlocksWorldBuzzle
         {
             int dimensionX = dataA.GetLength(1);
             int dimensionY = dataA.GetLength(0);
+            Index index = new Index(-1, -1);
             int distance = 0;
-            int index = 0;
-            int x = 0;
-            int y = 0;
-            List<char> dataBList = TwoDToOneD(dataB);
 
             for (int i = 0; i < dimensionY; i++)
             {
@@ -662,10 +888,8 @@ namespace BlocksWorldBuzzle
                     if ((dataA[i, j] == TileA || dataA[i, j] == TileB || dataA[i, j] == TileC)
                         && dataA[i, j] != dataB[i, j])
                     {
-                        index = dataBList.IndexOf(dataA[i, j]);
-                        x = index % dimensionX;
-                        y = index / dimensionX;
-                        distance += Math.Abs(i - y) + Math.Abs(j - x);
+                        index = ArrayIndexOf(dataB, dataA[i, j]);
+                        distance += Math.Abs(i - index.Y) + Math.Abs(j - index.X);
                     }
                 }
             }
@@ -685,25 +909,30 @@ namespace BlocksWorldBuzzle
         }
 
         /// <summary>
-        /// Copy 2D array to 1D one.
+        /// Get x and y dimentions of the place of the given value in the given array.
         /// </summary>
-        /// <param name="data"></param>
+        /// <param name="array"></param>
+        /// <param name="value"></param>
         /// <returns></returns>
-        private List<char> TwoDToOneD(char[,] data)
+        private Index ArrayIndexOf(char[,] array, char value)
         {
-            char[] newArray = new char[data.Length];
-            int dimensionX = data.GetLength(1);
-            int dimensionY = data.GetLength(0);
+            Index index = new Index(-1, -1);
+
+            int dimensionX = array.GetLength(1);
+            int dimensionY = array.GetLength(0);
 
             for (int i = 0; i < dimensionY; i++)
             {
                 for (int j = 0; j < dimensionX; j++)
                 {
-                    newArray[(dimensionX * i) + j] = data[i, j];
+                    if (array[i, j] == value)
+                    {
+                        index = new Index(i, j);
+                        return index;
+                    }
                 }
             }
-
-            return newArray.ToList();
+            return index;
         }
 
         #endregion
@@ -715,14 +944,25 @@ namespace BlocksWorldBuzzle
         /// </summary>
         private void DepthFirst()
         {
-            DepthFirst(0);
+            Node node = DepthFirst(0);
+
+            bool isSolutionFound = EqualStates(node.Data, goalState);
+            if (isSolutionFound)
+            {
+                PrintSolution(node);
+            }
+            else
+            {
+                PrintSolutionNotFound();
+            }
+            SearchFinished();
         }
 
         /// <summary>
         /// Depth first search algorithm until reaching the given maxLevel. If maxLevel = 0, there is
         /// no level limtation on the algorithm.
         /// </summary>
-        private void DepthFirst(int maxLevel = 0)
+        private Node DepthFirst(int maxLevel = 0)
         {
             Node currentNode = new Node(initialState, null);
             char[][,] childrenData = null;
@@ -753,27 +993,20 @@ namespace BlocksWorldBuzzle
                 }
                 else
                 {
-                    levels--;
+                    levels -= 2;
 
                     // if there are no childs, we need to go one level up
                     currentNode = DepthFirstStepUp(currentNode);
                     if (currentNode == null)
                     {
-                        throw new Exception("No 'Depth First' solution found, how come?");
+                        // "No 'Depth First' solution found at this level
+                        currentNode = new Node(initialState, null);
+                        break;
                     }
                 }
             }
 
-            bool isSolutionFound = EqualStates(currentNode.Data, goalState);
-            if (isSolutionFound)
-            {
-                PrintSolution(currentNode);
-            }
-            else
-            {
-                PrintSolutionNotFound();
-            }
-            SearchFinished();
+            return currentNode;
         }
 
         /// <summary>
@@ -836,7 +1069,7 @@ namespace BlocksWorldBuzzle
                 newLevelNodes = new List<Node>();
                 foreach (Node node in currentLevel.Nodes)
                 {
-                    newLevelData = AllPossibleChildren(node.Data);
+                    newLevelData = PossibleChildren(node);
                     newLevelNodes.AddRange(newLevelData.Select(i => new Node(i, node)));
 
                     nodes += newLevelData.Length;
@@ -848,7 +1081,8 @@ namespace BlocksWorldBuzzle
 
             // check if solution was found
             Node goalNode = currentLevel.Nodes.FirstOrDefault(i => EqualStates(i.Data, goalState));
-            if (goalNode != null)
+            bool isSolutionFound = goalNode != null;
+            if (isSolutionFound)
             {
                 PrintSolution(goalNode);
             }
@@ -860,19 +1094,19 @@ namespace BlocksWorldBuzzle
         }
 
         /// <summary>
-        /// Iterrative deepening (depth first) search algorithm with the maxLevel set by user
+        /// Depth limit search algorithm with the maxLevel set by user
         /// using UI (using variable iterativeDeepeningLevel).
         /// </summary>
-        private void IterativeDeepeningDF()
+        private void DepthLimit()
         {
             DepthFirst(iterativeDeepeningLevel);
         }
 
         /// <summary>
-        /// Iterrative deepening (breadth first) search algorithm with the maxLevel set by user
+        /// Breadth limit search algorithm with the maxLevel set by user
         /// using UI (using variable iterativeDeepeningLevel).
         /// </summary>
-        private void IterativeDeepeningBF()
+        private void BreadthLimit()
         {
             BreadthFirst(iterativeDeepeningLevel);
         }
@@ -894,9 +1128,7 @@ namespace BlocksWorldBuzzle
                 levels++;
 
                 // get possible children
-                // childrenData = AllPossibleChildren(currentNode.Data);
                 childrenData = PossibleChildren(currentNode);
-
                 if (childrenData.Length == 0)
                 {
                     // hooooray, the algo 'Heuristic' failed! to find a solution
@@ -907,7 +1139,7 @@ namespace BlocksWorldBuzzle
                 heuresticValues = new int[childrenData.Length];
                 for (int i = 0; i < heuresticValues.Length; i++)
                 {
-                    heuresticValues[i] = HeuristicValue(childrenData[i]);
+                    heuresticValues[i] = HeuristicValue(childrenData[i], goalState);
                 }
 
                 // find the data with the min heurestic cost/value
@@ -930,10 +1162,11 @@ namespace BlocksWorldBuzzle
 
         /// <summary>
         /// Calculate the heuristic value/cost for the given data.
+        /// The heuristic value is the cost from state one to state two.
         /// </summary>
-        /// <param name="dataOne"></param>
+        /// <param name="dataA"></param>
         /// <returns></returns>
-        private int HeuristicValue(char[,] dataOne)
+        private int HeuristicValue(char[,] dataA, char[,] dataB)
         {
             // there are several ways to calculate the heurestic value
             // approach 1: number of mis-placed tiles
@@ -941,13 +1174,11 @@ namespace BlocksWorldBuzzle
             // approach 3: any other distance algorithm
 
             // approach 1
-            int dimensionX = dataOne.GetLength(1);
-            int dimensionY = dataOne.GetLength(0);
+            int dimensionX = dataA.GetLength(1);
+            int dimensionY = dataA.GetLength(0);
             int misplacedCount = 0;
             int distance = 0;
-            int index = 0;
-            int x = 0;
-            int y = 0;
+            Index index = new Index(-1, -1);
 
             for (int i = 0; i < dimensionY; i++)
             {
@@ -956,22 +1187,41 @@ namespace BlocksWorldBuzzle
                     // check if tile is of interset, i.e Tile 'A', 'B', 'C' or 'G'
                     // and the tile is mis-placed, then calculate distance of mis-placement
                     // (i.e how far this tile is way from the correct position/place).
-                    if ((dataOne[i, j] == TileA
-                        || dataOne[i, j] == TileB
-                        || dataOne[i, j] == TileC
-                        || dataOne[i, j] == TileG)
-                        && dataOne[i, j] != goalState[i, j])
+                    if ((dataA[i, j] == TileA
+                        || dataA[i, j] == TileB
+                        || dataA[i, j] == TileC
+                        || dataA[i, j] == TileG)
+                        && dataA[i, j] != goalState[i, j])
                     {
-                        index = goalState1D.IndexOf(dataOne[i, j]);
-                        x = index % dimensionX;
-                        y = index / dimensionX;
-                        distance = Math.Abs(i - y) + Math.Abs(j - x);
+                        index = ArrayIndexOf(dataB, dataA[i, j]);
+                        distance = Math.Abs(i - index.Y) + Math.Abs(j - index.X);
                         misplacedCount += distance;
                     }
                 }
             }
 
             return misplacedCount;
+        }
+
+        /// <summary>
+        /// Iterrative deepening search algorithm.
+        /// </summary>
+        private void IterativeDeepening()
+        {
+            int maxLevel = 1;
+            bool isSolutionFound = false;
+            Node node = null;
+
+            while (!isSolutionFound)
+            {
+                nodes = 0;
+                levels = 0;
+                node = DepthFirst(maxLevel++);
+                isSolutionFound = EqualStates(node.Data, goalState);
+            }
+
+            PrintSolution(node);
+            SearchFinished();
         }
 
         /// <summary>

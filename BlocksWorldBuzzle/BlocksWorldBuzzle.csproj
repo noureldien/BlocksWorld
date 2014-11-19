@@ -57,6 +57,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Model\Index.cs" />
     <Compile Include="Model\Level.cs" />
     <Compile Include="Model\Node.cs" />
     <Compile Include="App\Utils.cs" />
