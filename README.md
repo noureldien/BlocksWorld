@@ -1,0 +1,1 @@
+Project for the coursework of Artificial Intelligence subject, MSc program, Soton
