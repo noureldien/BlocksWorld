@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BlocksWorldBuzzle
+namespace BlocksWorld
 {
     public class Node
     {
