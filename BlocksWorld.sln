@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlocksWorldBuzzle", "BlocksWorldBuzzle\BlocksWorldBuzzle.csproj", "{4B9A09AE-E1B1-4DC4-9D21-0094391FB0E0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlocksWorld", "BlocksWorld\BlocksWorld.csproj", "{4B9A09AE-E1B1-4DC4-9D21-0094391FB0E0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
