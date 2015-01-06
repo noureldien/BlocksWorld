@@ -64,15 +64,45 @@ namespace BlocksWorld
 
         #region Variables
 
+        /// <summary>
+        /// Thread used to do update the UI with search info. Separate the info update from the UI thread.
+        /// </summary>
         private Thread infoThread;
+        /// <summary>
+        /// Thread used to do the search. Separate the search from the UI thread.
+        /// </summary>
         private Thread searchThread;
+        /// <summary>
+        /// Current state of the game (started, stopped or paused).
+        /// </summary>
         private GameState gameState = GameState.Stopped;
+        /// <summary>
+        /// Type of the search algorithm used.
+        /// </summary>
         private SearchType searchType = SearchType._1_DepthFirst;
+        /// <summary>
+        /// Initial state of the game.
+        /// </summary>
         private char[,] initialState;
+        /// <summary>
+        /// Goal state of the game.
+        /// </summary>
         private char[,] goalState;
+        /// <summary>
+        /// All possible states.
+        /// </summary>
         private char[][,] allStates;
+        /// <summary>
+        /// Maximum level of the iterative deepening algorithm.
+        /// </summary>
         private int iterativeDeepeningLevel;
+        /// <summary>
+        /// Width of the blocks world.
+        /// </summary>
         private int worldWidth;
+        /// <summary>
+        /// Height of the blocks world.
+        /// </summary>
         private int worldHeight;
         /// <summary>
         /// Counter for the no. of nodes created.
@@ -102,11 +132,18 @@ namespace BlocksWorld
         /// Time span taken for processing the search algorithm.
         /// </summary>
         private TimeSpan processDuration;
+        /// <summary>
+        /// Use default initial and goal states in case the world is 4*4.
+        /// </summary>
+        private bool isDefaultStates = true;
 
         #endregion
 
         #region Constructor
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
@@ -316,7 +353,7 @@ namespace BlocksWorld
         /// <summary>
         /// Checkbox checked/unchecked, enable/disable the tiles A, B or C accordingly.
         /// </summary>
-        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        private void CheckBoxTileType_Click(object sender, RoutedEventArgs e)
         {
             CheckBox checkbox = (CheckBox)sender;
             string tag = checkbox.Tag.ToString();
@@ -342,6 +379,15 @@ namespace BlocksWorld
         }
 
         /// <summary>
+        /// Change the flag 'isDefaultStates'.
+        /// </summary>
+        private void CheckBoxDefaultStates_Click(object sender, RoutedEventArgs e)
+        {
+            isDefaultStates = (bool)checkBoxDefaultStates.IsChecked;
+            InitializeStatesInvoker();
+        }
+
+        /// <summary>
         /// When closing, make sure everything is stopped/disposed.
         /// </summary>
         /// <param name="sender"></param>
@@ -361,8 +407,8 @@ namespace BlocksWorld
         private void Initialize()
         {
             iterativeDeepeningLevel = 1;
-            worldWidth = 3;
-            worldHeight = 3;
+            worldWidth = 4;
+            worldHeight = 4;
 
             textBoxLevel.Text = iterativeDeepeningLevel.ToString();
             textBoxWorldWidth.Text = worldWidth.ToString();
@@ -400,9 +446,18 @@ namespace BlocksWorld
                 }
             }
 
-            // initial state and goal state are created randomly
-            initialState = RandomState(emptyState);
-            goalState = RandomState(emptyState);
+            // initial state and goal state
+            // check to use default states or create them randomly
+            if (isDefaultStates && worldWidth == 4 && worldHeight == 4)
+            {
+                initialState = DefaultInitialState();
+                goalState = DefaultGoalState();
+            }
+            else
+            {
+                initialState = RandomState(emptyState);
+                goalState = RandomState(emptyState);
+            }
 
             // copy the goal state to another 1D array
             allStates = DataPermutations(TileG, emptyState);
@@ -432,6 +487,8 @@ namespace BlocksWorld
 
                 groupBoxWorld.IsEnabled = true;
             });
+
+            Utils.DebugLine(HeuristicValue(initialState, goalState));
         }
 
         /// <summary>
@@ -477,6 +534,62 @@ namespace BlocksWorld
                         isTileAdded = true;
                     }
                 }
+            }
+            return state;
+        }
+
+        /// <summary>
+        /// Get the default initial state for the 4*4 world.
+        /// </summary>
+        /// <returns></returns>
+        private char[,] DefaultInitialState()
+        {
+            char[,] state = new char[,]
+            {
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileG},
+            };
+            if (isTileAEnabled)
+            {
+                state[3, 0] = TileA;
+            }
+            if (isTileBEnabled)
+            {
+                state[3, 1] = TileB;
+            }
+            if (isTileCEnabled)
+            {
+                state[3, 2] = TileC;
+            }
+            return state;
+        }
+
+        /// <summary>
+        /// Get the default goal state for the 4*4 world.
+        /// </summary>
+        /// <returns></returns>
+        private char[,] DefaultGoalState()
+        {
+            char[,] state = new char[,]
+            {
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileE},
+                {TileE, TileE, TileE, TileG},
+            };
+            if (isTileAEnabled)
+            {
+                state[1, 1] = TileA;
+            }
+            if (isTileBEnabled)
+            {
+                state[2, 1] = TileB;
+            }
+            if (isTileCEnabled)
+            {
+                state[3, 1] = TileC;
             }
             return state;
         }
@@ -612,19 +725,27 @@ namespace BlocksWorld
         /// <param name="node"></param>
         private void PrintSolution(Node node)
         {
+            // since we've only a reference to the last node
+            // move upwords and optain all nodes, add them to a list
+            // then reverse this list
             int steps = 0;
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append("\n--------------------------------");
-            stringBuilder.Append("\n| Hoooooooray, solution found! |");
-            stringBuilder.Append("\n| The solution retrospectively |");
-            stringBuilder.Append("\n--------------------------------");
+            List<char[,]> nodesData = new List<char[,]>();
             while (node != null)
             {
                 steps++;
-                stringBuilder.Append(FormatNodeData(node.Data));
+                nodesData.Add(node.Data);
                 node = node.Parent;
             }
+            nodesData.Reverse();
 
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("\n--------------------------------");
+            stringBuilder.Append("\n| Hoooooooray, solution found! |");
+            stringBuilder.Append("\n--------------------------------");
+            foreach (char[,] nodeData in nodesData)
+            {
+                stringBuilder.Append(FormatNodeData(nodeData));
+            }
             stringBuilder.Append(String.Format("\n\nSTEPS: {0}\n\n---------------\n|     EOP     |\n---------------", steps));
 
             this.Dispatcher.Invoke(() =>
@@ -1163,10 +1284,61 @@ namespace BlocksWorld
         /// <summary>
         /// Calculate the heuristic value/cost for the given data.
         /// The heuristic value is the cost from state one to state two.
+        /// The method fo calculating the cost/value is the manhatten distance.
         /// </summary>
         /// <param name="dataA"></param>
+        /// <param name="dataB"></param>
         /// <returns></returns>
         private int HeuristicValue(char[,] dataA, char[,] dataB)
+        {
+            int dimensionX = dataA.GetLength(1);
+            int dimensionY = dataA.GetLength(0);
+            int cost = 0;
+
+            Index index = new Index(-1, -1);
+
+            for (int i = 0; i < dimensionY; i++)
+            {
+                for (int j = 0; j < dimensionX; j++)
+                {
+                    // check if tile is of interset, i.e Tile 'A', 'B', 'C' or 'G'
+                    // and the tile is mis-placed, then calculate distance of mis-placement
+                    // (i.e how far this tile is way from the correct position/place).
+                    if ((dataA[i, j] == TileA
+                        || dataA[i, j] == TileB
+                        || dataA[i, j] == TileC
+                        || dataA[i, j] == TileG)
+                        && dataA[i, j] != goalState[i, j])
+                    {
+                        index = ArrayIndexOf(dataB, dataA[i, j]);
+
+                        // if the tile is the agent, then the cost is equal to the distance
+                        // but it case of the other tiles (A, B, C) it can take up to n moves
+                        // by the agent to push the tile only 1 move
+                        // that's why the distance is multiplied by factor (n)
+                        if (dataA[i, j] == TileG)
+                        {
+                            cost += Math.Abs(i - index.Y) + Math.Abs(j - index.X);
+                        }
+                        else
+                        {
+                            cost += 6 * (Math.Abs(i - index.Y) + Math.Abs(j - index.X));
+                        }
+                    }
+                }
+            }
+
+            return cost;
+        }
+
+        /// <summary>
+        /// Calculate the heuristic value/cost for the given data.
+        /// The heuristic value is the cost from state one to state two.
+        /// </summary>
+        /// <param name="dataA"></param>
+        /// <param name="dataB"></param>
+        /// <returns></returns>
+        private int HeuristicValueTest(char[,] dataA, char[,] dataB)
         {
             // there are several ways to calculate the heurestic value
             // approach 1: number of mis-placed tiles
@@ -1249,3 +1421,68 @@ namespace BlocksWorld
         #endregion
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
